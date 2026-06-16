@@ -1,0 +1,15 @@
+.gradle/
+build/
+out/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+HELP.md
+
+# Spring Modulith Documenter 출력
+target/
+
+# Local config
+src/main/resources/application-local.yml
+src/main/resources/application-secret.yml

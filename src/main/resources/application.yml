@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: partner-channel-modulith
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/partner_channel
+    username: pcm
+    password: pcm
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  jackson:
+    time-zone: Asia/Seoul
+
+  flyway:
+    enabled: true
+    schemas: channel_schema,core_schema,saga_schema,logistics_schema
+    default-schema: channel_schema
+    create-schemas: true
+    locations: classpath:db/migration/channel,classpath:db/migration/core,classpath:db/migration/saga,classpath:db/migration/logistics
+
+  kafka:
+    bootstrap-servers: localhost:9093
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          enabled: true
+      externalization:
+        enabled: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,modulith
