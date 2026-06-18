@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.5'
-    id 'io.spring.dependency-management' version '1.1.6'
+    id 'org.springframework.boot' version '4.0.7'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'io.github.orange2652.partner.channel'
@@ -9,7 +9,7 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
@@ -18,7 +18,7 @@ repositories {
 }
 
 ext {
-    modulithVersion = '1.3.3'
+    modulithVersion = '2.0.7'
 }
 
 dependencyManagement {
@@ -46,9 +46,6 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
 
-    // --- Jackson (JSR-310) ---
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-
     // --- Lombok ---
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -58,7 +55,7 @@ dependencies {
     // --- Test ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.modulith:spring-modulith-starter-test'
-    testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

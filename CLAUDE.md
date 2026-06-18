@@ -10,6 +10,7 @@
 | 날짜 | 변경 내용 | 대상 | 사유 |
 |------|----------|------|------|
 | 2026-06-16 | 초기 구성 | 전체 (4 에이전트 + 5 스킬) | `partner-channel-msa` 의 하네스를 modulith 컨텍스트로 재구성 |
+| 2026-06-18 | 빌드 스택 업그레이드 | 언어/빌드 결정 | Java 21→25 LTS / Boot 3.4.5→4.0.7 / Modulith 1.3.3→2.0.7 / ArchUnit 1.3.0→1.4.2 / jsr310 제거. `./gradlew clean build` PASS |
 
 ## 프로젝트 정체성
 
@@ -33,7 +34,7 @@
 | 외부 Kafka | 외부 채널/시스템과의 트리거 publish 만 — `@Externalized` 로 발행 (`channel.order.received` / `logistics.invoice.received`) |
 | DB 분리 | 같은 DB + schema 분리 (`channel_schema` / `core_schema` / `saga_schema` / `logistics_schema`) |
 | 의존 검증 | Spring Modulith `ApplicationModules.verify()` + ArchUnit |
-| 언어/빌드 | Java 21 + Spring Boot 3.4.5 + Spring Modulith 1.3.3 + Gradle Groovy DSL + Lombok + ArchUnit |
+| 언어/빌드 | Java 25 (LTS) + Spring Boot 4.0.7 + Spring Modulith 2.0.7 + Gradle 9.5.1 Groovy DSL + Lombok + ArchUnit 1.4.2 (io.spring.dependency-management 1.1.7, jsr310 제거 — Jackson 3 내장) |
 
 ## 진행 방식 — Doc-first
 
