@@ -26,9 +26,11 @@ CREATE TABLE core_schema.invoices (
     CONSTRAINT uk_invoices_channel_ext UNIQUE (channel, external_order_product_id)
 );
 
+-- R3: consumer 멱등성 — 복합 PK (consumer_name, event_id).
+-- event_id = "{channel}:{externalOrderProductId}", consumer_name = 처리 주체 (예: "channelConfirm", "compensate:step1").
 CREATE TABLE core_schema.processed_event (
-    id          BIGSERIAL PRIMARY KEY,
-    event_id    VARCHAR(128) NOT NULL,
-    processed_at TIMESTAMP   NOT NULL DEFAULT now(),
-    CONSTRAINT uk_core_processed_event UNIQUE (event_id)
+    consumer_name VARCHAR(64)  NOT NULL,
+    event_id      VARCHAR(128) NOT NULL,
+    processed_at  TIMESTAMP    NOT NULL DEFAULT now(),
+    CONSTRAINT pk_core_processed_event PRIMARY KEY (consumer_name, event_id)
 );
