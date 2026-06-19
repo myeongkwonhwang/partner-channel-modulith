@@ -22,9 +22,12 @@ CREATE TABLE channel_schema.polling_cursor (
     CONSTRAINT uk_polling_cursor UNIQUE (channel, cursor_type)
 );
 
+-- R3: consumer 멱등성 — 복합 PK (consumer_name, event_id).
+-- event_id = "{channel}:{externalOrderProductId}", consumer_name = 처리 주체 (예: "orderReception").
+-- shared ProcessedEventJpaEntity(@MappedSuperclass) 와 정합 (core_schema 와 동일 구조, schema 만 다름).
 CREATE TABLE channel_schema.processed_event (
-    id          BIGSERIAL PRIMARY KEY,
-    event_id    VARCHAR(128) NOT NULL,
-    processed_at TIMESTAMP   NOT NULL DEFAULT now(),
-    CONSTRAINT uk_channel_processed_event UNIQUE (event_id)
+    consumer_name VARCHAR(64)  NOT NULL,
+    event_id      VARCHAR(128) NOT NULL,
+    processed_at  TIMESTAMP    NOT NULL DEFAULT now(),
+    CONSTRAINT pk_channel_processed_event PRIMARY KEY (consumer_name, event_id)
 );
