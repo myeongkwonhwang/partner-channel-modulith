@@ -1,6 +1,6 @@
 ---
 name: pcmod-orchestrator
-description: partner-channel-modulith 프로젝트 작업 진입점. 작업 유형을 분류하여 4명의 전문 에이전트 (modulith-architect / channel-spec-analyst / hexa-clean-reviewer / doc-keeper) + 글로벌 java-spring-expert 에게 위임한다. "SAGA step 설계", "모듈 경계", "Application Event 추가", "토스 API 규격", "코드 리뷰", "결정 기록", "ADR 작성", "검토해줘", "step 추가", "Pivot 검토", "@Externalized 매핑" 등 본 프로젝트 작업 요청 시 반드시 본 스킬로 진입. 또한 "다시 실행", "재실행", "보완", "수정", "이전 결과 기반으로", "결과 개선" 같은 후속 작업 키워드에도 트리거.
+description: partner-channel-modulith 프로젝트 작업 진입점. 작업 유형을 분류하여 5명의 전문 에이전트 (modulith-architect / channel-spec-analyst / hexa-clean-reviewer / test-author / doc-keeper) + 글로벌 java-spring-expert 에게 위임한다. "SAGA step 설계", "모듈 경계", "Application Event 추가", "토스 API 규격", "코드 리뷰", "테스트 작성", "단위 테스트", "동시성 검증", "결정 기록", "ADR 작성", "검토해줘", "step 추가", "Pivot 검토", "@Externalized 매핑" 등 본 프로젝트 작업 요청 시 반드시 본 스킬로 진입. 또한 "다시 실행", "재실행", "보완", "수정", "이전 결과 기반으로", "결과 개선" 같은 후속 작업 키워드에도 트리거.
 ---
 
 # pcmod-orchestrator — partner-channel-modulith 작업 진입점
@@ -38,6 +38,7 @@ description: partner-channel-modulith 프로젝트 작업 진입점. 작업 유�
 | "SAGA step N", "Pivot", "보상 흐름", "신규 흐름", "Application Event", "모듈 경계", "@Externalized 매핑" | `modulith-architect` | `saga-event-design` |
 | "토스 API", "쿠팡 cancel", "네이버 주문", "외부 API 규격", "{채널} 스펙" | `channel-spec-analyst` | `channel-api-research` |
 | "리뷰", "검토", "컨벤션 확인", "의존성 방향", "PR 검토", "ArchUnit 위반", "ApplicationModules.verify()" | `hexa-clean-reviewer` | `hexa-arch-review` |
+| "테스트", "테스트 작성", "테스트 추가", "단위 테스트", "슬라이스 테스트", "동시성 검증", "멱등 테스트", "ArchUnit 규칙 테스트", "테스트 보강" | `test-author` | `test-write` |
 | "결정 기록", "ADR 작성", "MEMORY.md 정리", "SUPERSEDED 처리" | `doc-keeper` | `doc-first-record` |
 | 하루 마무리 ("/eod", "오늘 작업 기록") | `doc-keeper` | `end-of-day` (글로벌 스킬) |
 | 일반 Java/Spring/Modulith 자문 ("왜 이렇게?", "트랜잭션 격리", "N+1", "JPA 패턴", "Modulith vs MSA 비교") | `java-spring-expert` (글로벌) | (전용 스킬 없음 — 에이전트 자체 응답) |
@@ -50,7 +51,7 @@ description: partner-channel-modulith 프로젝트 작업 진입점. 작업 유�
 ```
 Agent(
   description="<3~5단어>",
-  subagent_type="general-purpose" (modulith-architect 는 "Plan"),
+  subagent_type="general-purpose" (modulith-architect 는 "Plan", hexa-clean-reviewer/test-author 는 해당 등록 타입),
   model="opus",
   prompt="""
 당신은 본 프로젝트의 {agent-name} 입니다.
@@ -89,6 +90,7 @@ MSA 참조 (있을 시):
 | SAGA step / 모듈 경계 설계 합의 | `doc-keeper` — 메모리 기록 |
 | 외부 API 규격 조사 완료 | `modulith-architect` (SAGA 영향 시) + `doc-keeper` (보관 가치 시) |
 | 코드 리뷰 BLOCKER 발견 | `java-spring-expert` 또는 사용자 — 수정 진행 |
+| 신규/수정 코드 작성 완료 (모듈 골격 / Adapter / 도메인) | `test-author` — 헥사 계층별 테스트 작성 (특히 멱등 원자성·schema 라우팅) |
 | 반복 위반 패턴 | `doc-keeper` — feedback memory 후보 등록 |
 | ApplicationModules.verify() FAIL | `modulith-architect` — 모듈 경계 재설계 검토 |
 

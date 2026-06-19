@@ -2,7 +2,7 @@
 
 ## 하네스: partner-channel-modulith
 
-**목표:** 본 프로젝트의 작업을 4명의 전문 에이전트 (modulith-architect / channel-spec-analyst / hexa-clean-reviewer / doc-keeper) + 글로벌 java-spring-expert 에게 분담하여 Doc-first 원칙을 일관되게 적용.
+**목표:** 본 프로젝트의 작업을 5명의 전문 에이전트 (modulith-architect / channel-spec-analyst / hexa-clean-reviewer / test-author / doc-keeper) + 글로벌 java-spring-expert 에게 분담하여 Doc-first 원칙을 일관되게 적용.
 
 **트리거:** 본 프로젝트 작업 요청 시 `pcmod-orchestrator` 스킬을 사용. 단순 질문 (단발성 사실 확인 등) 은 직접 응답 가능.
 
@@ -11,6 +11,7 @@
 |------|----------|------|------|
 | 2026-06-16 | 초기 구성 | 전체 (4 에이전트 + 5 스킬) | `partner-channel-msa` 의 하네스를 modulith 컨텍스트로 재구성 |
 | 2026-06-18 | 빌드 스택 업그레이드 | 언어/빌드 결정 | Java 21→25 LTS / Boot 3.4.5→4.0.7 / Modulith 1.3.3→2.0.7 / ArchUnit 1.3.0→1.4.2 / jsr310 제거. `./gradlew clean build` PASS |
+| 2026-06-19 | 테스트 작성 전담 추가 | `test-author` 에이전트 + `test-write` 스킬 (4→5 에이전트, 6→7 스킬) | 테스트 작성 담당 공백. 헥사 계층별 전략 + 멱등 ON CONFLICT 원자성·동시성 race + Testcontainers schema 라우팅 + ArchUnit D-3 전담. hexa-clean-reviewer(리뷰)와 작성 역할 분리 |
 
 ## 프로젝트 정체성
 
