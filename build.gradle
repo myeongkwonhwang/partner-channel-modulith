@@ -54,9 +54,23 @@ dependencies {
 
     // --- Test ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Boot 4 는 테스트 슬라이스를 feature 별 모듈로 분리했다 — @DataJpaTest / @AutoConfigureTestDatabase 는
+    // starter-test 에 없고 data-jpa-test starter 가 전이로 가져온다.
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation 'org.springframework.modulith:spring-modulith-starter-test'
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Boot 4 는 Flyway 자동설정을 spring-boot-flyway 모듈로 분리했다. @DataJpaTest 슬라이스에서
+    // 실제 baseline 마이그레이션을 돌려 @Table(schema=) 라우팅을 검증하려면 슬라이스에 명시 import 한다.
+    testImplementation 'org.springframework.boot:spring-boot-flyway'
+
+    // --- Testcontainers (infra 슬라이스 — 실제 PostgreSQL, 실행 시 Docker 필요) ---
+    // Boot 4.0.7 관리 버전 = Testcontainers 2.0.5. 2.x 는 artifact 좌표가 재편되어
+    // testcontainers-junit-jupiter / testcontainers-postgresql 를 쓴다 (1.x 의 junit-jupiter/postgresql 아님).
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
 }
 
 test {
