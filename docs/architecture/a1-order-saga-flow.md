@@ -2,7 +2,7 @@
 
 > 외부 채널에 주문이 들어온 뒤 "우리 시스템이 그 주문을 확정하기까지" 의 흐름을, **모듈 / 이벤트 / 트랜잭션 경계** 관점에서 설명합니다.
 >
-> ⚠️ **현재 구현 상태**: 아래 흐름은 R1~R5b 에서 **설계 확정** 됐고, Phase 1 에서 **`shared` 모듈의 계약(이벤트 record · Channel · 멱등 추상)만 코드로 존재** 합니다. 각 step 의 listener/처리 로직은 Phase 2 에서 구현됩니다. 즉 본 문서는 "지금 짜고 있는 골격이 무엇을 향하는가" 의 지도입니다.
+> ⚠️ **현재 구현 상태 (2026-06-22)**: 아래 흐름은 R1~R6 에서 **설계 확정** 됐고, 코드로는 **sagaStart → step1 unconfirmedOrder → step2 validate → step3 channelConfirm + R4 보상(외부 cancel→staging LIFO)까지 와이어링 완료**, 그리고 **토스 채널 구현체(ConfirmStrategy/CompensationPort/OrderQueryPort)까지 구현**됐습니다. 남은 것은 **step4 confirmedOrder(Pivot) 배선**(현재 `ConfirmedOrderCommand` 가 발행되나 core 소비자 미배선=dangling)과 **@SpringBootTest 통합 검증**입니다. 검증은 단위(Port mock) 기준 green이며, 실제 비동기·Tx·outbox는 통합 테스트에서 확인 예정입니다.
 
 ---
 
@@ -29,7 +29,7 @@
     ▼
  batch ──OrderReceivedEvent──▶ @Externalized Kafka "channel.order.received"  (외부 알림)
     │                          └─ in-VM ─▶ saga.sagaStart (Kafka 되읽지 않음, R2)
-    │                                         │ saga_state INSERT (STARTED)
+    │                                         │ saga_state INSERT (RUNNING)
     │                                         ▼
     │                          ┌──── UnconfirmedOrderCommand ────▶ adapter
     │                          │        step1: staging INSERT (외부 전이 없음, R2)
@@ -81,7 +81,15 @@ MSA 는 step1 에서 staging 적재 + 외부 PREPARING_PRODUCT 전이를 함께 
 - 네이버: 발주확인 전용 API(`placeOrderStatus=OK`)
 - 쿠팡: 상품준비중 전용 endpoint(`INSTRUCT`)
 
-→ `ConfirmStrategy` / `CompensationPort` 같은 Port 인터페이스 + 채널별 구현체 + `Map<Channel, Strategy>` 디스패치로 처리합니다.
+→ `ConfirmStrategy` / `CompensationPort` 같은 Port 인터페이스 + 채널별 구현체 + `Map<Channel, Strategy>` 디스패치(Registry)로 처리합니다. 토스 구현체는 `adapter.ordr.infra.toss`(OAuth2 토큰 + RestClient)에 있고, 네이버·쿠팡은 spec 확정 후(R5b D-5) 같은 Port 뒤에 붙습니다.
+
+### (d) 외부 호출은 Tx "밖" — 외부-호출 step 의 리스너 컨벤션 (R6)
+step3 channelConfirm·R4 보상 cancel 처럼 **외부 API 를 호출하는 step** 은 step1/step2(순수 DB)와 리스너 구조가 다릅니다. `@ApplicationModuleListener` 는 본문 전체를 한 Tx 로 감싸 외부 호출이 Tx 에 갇히므로, 외부-호출 step 은:
+- 리스너를 **`@TransactionalEventListener(AFTER_COMMIT)`(비-Tx)** 로 두고,
+- 멱등 마킹·reply 발행만 **`AdapterTxSteps`(각각 `@Transactional(REQUIRES_NEW)`)** 협력 빈으로 분리,
+- 외부 호출(`ConfirmStrategy.confirm` / `CompensationPort.cancel`)은 그 두 Tx **사이**에서 Tx 없이 실행합니다(협업원칙: 외부 WRITE 는 Tx 밖).
+
+크래시 복구는 outbox 맹목 재전달이 아니라 R5a timeout scanner + 사전 GET 가드(`OrderQueryPort`, 외부 진실 기반)가 담당합니다.
 
 ---
 
@@ -91,12 +99,14 @@ at-least-once 환경(이벤트 재전달, outbox republish)이라 **모든 수�
 
 ```
 listener 진입
-   ├─ (1) processedEventRepository.markIfFirst(consumerName, eventId)   ← 같은 로컬 Tx
+   ├─ (1) idempotencyGuard.markIfFirst(consumerName, eventId)           ← 같은 로컬 Tx
    │        false(이미 처리됨) → 즉시 skip
    ├─ (2) 비즈니스 처리 (DB write)                                       ← 같은 Tx
    └─ (3) reply 발행
-   ※ 외부 API 호출은 이 Tx "밖" (협업원칙)
+   ※ 외부 API 호출은 이 Tx "밖" (협업원칙 — 외부-호출 step 은 §3(d) 컨벤션)
 ```
+
+> 멱등 가드는 **모듈별 전용 Port**(`SagaIdempotencyGuard` / `CoreIdempotencyGuard` / `AdapterIdempotencyGuard` / `BatchIdempotencyGuard`)입니다. 초기 설계의 단일 `shared.ProcessedEventRepository` 는 구현 4개 주입 모호성(`NoUniqueBeanDefinition`) 때문에 모듈별 Port 로 분리했습니다(R3/D-3 조정). 물리 테이블 구조만 `shared` `@MappedSuperclass` 로 공유합니다.
 
 - 키: `eventId = "{channel}:{externalOrderProductId}"` (`EventKey`), 처리 주체: `consumerName`(예: `"channelConfirm"`, `"compensate:unconfirmedOrder"`)
 - 가드 구현은 JPA `save()` 가 아니라 **native `INSERT ... ON CONFLICT DO NOTHING` + 영향 행 수** 로 원자성 보장.
@@ -132,29 +142,34 @@ listener 진입
 
 ---
 
-## 6. 지금 코드에 존재하는 것 (Phase 1 shared)
+## 6. 지금 코드에 존재하는 것 (2026-06-22)
 
-위 흐름 중 **계약(데이터 모양)** 만 코드로 있습니다. `shared/event/ordr` 의 record 들이 그것입니다.
+`shared/event/ordr` 의 이벤트 계약은 물론, **sagaStart~step3 + R4 보상의 오케스트레이션 로직과 토스 구현체까지** 코드로 있습니다.
 
-| 흐름 요소 | 대응 코드 (shared) |
-|-----------|--------------------|
-| 트리거 | `OrderReceivedEvent` (`@Externalized`) |
-| step1 | `UnconfirmedOrderCommand` / `UnconfirmedOrderReply` |
-| step2 | `ValidateCommand` / `ValidateReply`(PASSED·REJECTED) |
-| step3 | `ChannelConfirmCommand` / `ChannelConfirmReply` |
-| step4 | `ConfirmedOrderCommand` / `ConfirmedOrderReply`(FailureOutcome) |
-| 보상 | `CompensateUnconfirmedOrderRequested` / `UnconfirmedOrderCompensated`, `CompensateChannelConfirmRequested` / `ChannelConfirmCompensated`(MANUAL_REQUIRED) |
-| 멱등 | `ProcessedEvent` / `ProcessedEventRepository.markIfFirst` / `EventKey` |
-| 채널 | `Channel`(TOSS/NAVER/COUPANG) |
+| 흐름 요소 | 상태 | 대응 코드 |
+|-----------|------|-----------|
+| 트리거 | ✅ | `OrderReceivedEvent`(`@Externalized`) + saga `OrderSagaStarter`(in-VM 수신) |
+| step1 unconfirmedOrder | ✅ | adapter `UnconfirmedOrderHandler` + saga `UnconfirmedReplyHandler` |
+| step2 validate | ✅ | core `ValidateHandler`/`Validator` + saga `ValidateReplyHandler` |
+| step3 channelConfirm | ✅ | adapter `ChannelConfirmHandler`(+`AdapterTxSteps`/`ConfirmStrategyRegistry`) + saga `ChannelConfirmReplyHandler` |
+| step4 confirmedOrder | ⛔ dangling | `ConfirmedOrderCommand` 발행되나 **core 소비자 미배선** (다음 작업) |
+| 보상(R4) | ✅ | saga `OrderSagaCompensator`/`ChannelConfirmCompensatedHandler`/`UnconfirmedOrderCompensatedHandler` + adapter `ChannelConfirmCompensationHandler`/`UnconfirmedOrderCompensationHandler` + `CompensationPortRegistry` |
+| 토스 구현체 | ✅ | `adapter.ordr.infra.toss`: `TossApiClient`/`TossTokenManager`/`TossConfirmStrategy`/`TossCompensationPort`/`TossOrderQueryAdapter` |
+| 사전 GET 가드 | ✅(토스) | `OrderQueryPort` + `TossOrderQueryAdapter`(raw 19값→`ExternalOrderStatus` 추상 매핑) |
+| 멱등 | ✅ | 모듈별 `*IdempotencyGuard` + `EventKey`(native ON CONFLICT) |
+| 취소 사유 | ✅ | `CancelReason`(`DeliveryPenaltyCharger` charger 1급) — R6 |
+| 채널 | ✅ | `Channel`(TOSS/NAVER/COUPANG) |
 
 상관 키 `sagaId` 는 MSA 가 Kafka 헤더로 운반하던 것을, in-VM 이벤트인 모듈리스에서는 **record payload 에 명시** 합니다.
 
-### 아직 없는 것 (Phase 2~)
-- 각 step 의 `@ApplicationModuleListener` / publisher (saga 오케스트레이션)
-- `PollingStrategy` / `ConfirmStrategy` / `CompensationPort` 구현체
-- `Order` / `StagingOrder` / `SagaState` 도메인 + JPA Entity + Repository (Phase 1 core~saga 단계)
-- timeout scanner / reconciliation worker / DLQ (Phase 4)
+### 아직 없는 것
+- **step4 confirmedOrder(Pivot)** 배선 — core 소비자(물류 전송 Tx 밖 → orders INSERT Tx) + saga `ConfirmedOrderReplyHandler`(→COMPLETED) + reconciliation
+- **@SpringBootTest 통합 검증** — 실제 비동기·Tx·outbox dispatch(지금까지 단위 Port mock)
+- `PollingStrategy`(신규 주문 수집) + 네이버·쿠팡 구현체(R5b D-5 격리)
+- timeout scanner / reconciliation worker / DLQ + ShedLock (R5a, Phase 4)
+- 토스 sandbox 실호출 검증(`TossApiClient` 는 단위에서 mock)
+- Phase 3 — B1 송장 SAGA + `@Externalized` Kafka
 
 ---
 
-> 결정의 "왜" 는 auto-memory(`project_pcmod_r1`~`r5b`, `project_pcmod_phase1_order_vertical`)에, 그날그날 한 일은 [`docs/worklog/`](../worklog/) 에 있습니다.
+> 결정의 "왜" 는 auto-memory(`project_pcmod_r1`~`r6_toss_port_refinement`, `project_pcmod_toss_adapter_spec_2026_06_22`)에, 그날그날 한 일은 [`docs/worklog/`](../worklog/) 에 있습니다.

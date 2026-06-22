@@ -265,13 +265,13 @@ docker-compose up -d
 | Phase | 상태 | 내용 |
 |-------|------|------|
 | **Phase 0** | ✅ 완료 | 골격 — 4 module + shared + 4 schema + Docker + Modulith verify |
-| Phase 1 | 진행 예정 | libs 매핑 — 도메인 + Port 정의 |
-| Phase 2 | 진행 예정 | A1 SAGA Application Events 구현 |
+| **Phase 1** | ✅ 완료 | libs 매핑 — order vertical 5모듈(shared/core/batch/adapter/saga) 도메인 + Port |
+| **Phase 2** | 🔄 진행 중 | A1 SAGA — sagaStart~step3 + R4 보상 + 토스 구현체(R6) 완료. **step4 confirmedOrder(Pivot) 배선 + @SpringBootTest 통합 검증** 남음 |
 | Phase 3 | 진행 예정 | B1 SAGA + `@Externalized` Kafka |
-| Phase 4 | 진행 예정 | 3 개 ADR (TIMEOUT / Pivot reconciliation / DLQ) 코드 |
+| Phase 4 | 진행 예정 | 3 개 ADR (TIMEOUT / Pivot reconciliation / DLQ) 코드 + ShedLock/scanner |
 | Phase 5 | 진행 예정 | Modulith verification + ArchUnit 통합 |
 
-**지금 단계** 는 "건물 골조" 만 세워둔 상태입니다. 빌드는 통과하지만 비즈니스 로직은 비어있습니다.
+**지금 단계** (2026-06-22): A1 주문 SAGA 의 정상 경로 step1~3 과 보상(R4), 토스 채널 연동까지 코드로 동작합니다(단위 테스트 기준). step4 Pivot 배선과 통합 테스트가 다음 작업입니다.
 
 ---
 
