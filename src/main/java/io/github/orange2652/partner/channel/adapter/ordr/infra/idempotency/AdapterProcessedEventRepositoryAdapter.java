@@ -1,6 +1,6 @@
 package io.github.orange2652.partner.channel.adapter.ordr.infra.idempotency;
 
-import io.github.orange2652.partner.channel.shared.idempotency.ProcessedEventRepository;
+import io.github.orange2652.partner.channel.adapter.ordr.application.AdapterIdempotencyGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-class AdapterProcessedEventRepositoryAdapter implements ProcessedEventRepository {
+class AdapterProcessedEventRepositoryAdapter implements AdapterIdempotencyGuard {
 
     private final AdapterProcessedEventJpaRepository jpaRepository;
 

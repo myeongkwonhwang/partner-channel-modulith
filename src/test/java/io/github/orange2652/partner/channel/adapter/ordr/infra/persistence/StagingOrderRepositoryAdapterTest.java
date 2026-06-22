@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.orange2652.partner.channel.adapter.ordr.domain.StagingOrder;
 import io.github.orange2652.partner.channel.adapter.ordr.infra.PersistenceSliceTest;
+import jakarta.persistence.EntityManager;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ class StagingOrderRepositoryAdapterTest extends PersistenceSliceTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void save_는_id_를_채번하고_왕복_매핑한다() {
@@ -123,16 +127,14 @@ class StagingOrderRepositoryAdapterTest extends PersistenceSliceTest {
 
         // when — 같은 id 로 CANCELED 전이 저장(merge → UPDATE)
         adapter.save(saved.canceled());
+        entityManager.flush();   // 지연된 merge UPDATE 를 DB 로 강제 — flush 없이는 native read 가 옛 값(ACTIVE)을 본다
 
-        // then — 행 수는 그대로 1(중복 INSERT 아님). INSERT 는 IDENTITY 라 즉시 flush 되므로 native count 로 확인.
+        // then — UPDATE 가 실제 DB 에 반영됐는지 native 로 직접 확인(영속 컨텍스트 L1 우회). 행 수는 그대로 1.
         Long total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM channel_schema.staging_order WHERE id = ?", Long.class, saved.id());
+        String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM channel_schema.staging_order WHERE id = ?", String.class, saved.id());
         assertThat(total).isEqualTo(1L);
-
-        // status 전이는 merge(UPDATE)라 flush 지연 — 영속 컨텍스트 경유(Port 왕복)로 확인.
-        Optional<StagingOrder> reloaded = adapter.findById(saved.id());
-        assertThat(reloaded).isPresent();
-        assertThat(reloaded.get().status()).isEqualTo("CANCELED");
-        assertThat(reloaded.get().isCanceled()).isTrue();
+        assertThat(status).isEqualTo("CANCELED");
     }
 }

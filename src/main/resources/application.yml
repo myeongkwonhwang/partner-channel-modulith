@@ -42,6 +42,15 @@ spring:
       externalization:
         enabled: true
 
+# 외부 채널 연동 (R6) — 비밀값은 환경변수로 주입(yml 평문 금지). 미설정 시 빈 값으로 부팅되며 실호출 시점에만 필요.
+partner-channel:
+  toss:
+    base-url: ${TOSS_BASE_URL:}
+    token-url: ${TOSS_TOKEN_URL:}
+    client-id: ${TOSS_CLIENT_ID:}
+    client-secret: ${TOSS_CLIENT_SECRET:}
+    query-lookback-days: 31
+
 server:
   port: 8080
 
