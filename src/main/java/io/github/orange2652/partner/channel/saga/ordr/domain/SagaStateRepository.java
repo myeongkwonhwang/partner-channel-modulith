@@ -1,5 +1,7 @@
 package io.github.orange2652.partner.channel.saga.ordr.domain;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,4 +19,10 @@ public interface SagaStateRepository {
     Optional<SagaState> findBySagaId(UUID sagaId);
 
     Optional<SagaState> findByCorrelationKey(String correlationKey);
+
+    /**
+     * 주어진 status 이면서 마지막 전이가 {@code threshold} 이전인(=그 이후로 멈춰 있는) saga 들 — R5a stuck scanner 용.
+     * saga 자기 schema 만 조회한다.
+     */
+    List<SagaState> findStuck(String status, LocalDateTime threshold);
 }

@@ -26,6 +26,9 @@ public final class A1OrderSaga {
     /** step3 통과 후 — 내부 주문 확정 + 자사 물류 전송(R2 step4 Pivot, core) 대기. */
     public static final String STEP_CONFIRMED_ORDER = "CONFIRMED_ORDER";
 
+    /** 시작/진행 중 status — stuck scanner(R5a)가 SLA 초과 RUNNING 을 조회하는 키. SagaState.start 의 초기 status. */
+    public static final String STATUS_RUNNING = "RUNNING";
+
     /** 보상 진행 중 (R4) — 외부 cancel → staging 취소 LIFO 진행. saga_state.status. */
     public static final String STATUS_COMPENSATING = "COMPENSATING";
 
@@ -34,6 +37,12 @@ public final class A1OrderSaga {
 
     /** 외부 cancel 미가용/영구실패 terminal (R4) — 운영자 수동 개입 대기. */
     public static final String STATUS_PENDING_MANUAL_CANCEL = "PENDING_MANUAL_CANCEL";
+
+    /** Pivot(step4) stuck (R5a ③) — 주문 확정/물류 전송 부분실패 의심, reconciliation 대기. */
+    public static final String STATUS_PENDING_RECONCILIATION = "PENDING_RECONCILIATION";
+
+    /** 보상 stuck terminal (R5a ③) — COMPENSATING 이 SLA 내 종료되지 못함, 운영 개입 대상. */
+    public static final String STATUS_COMPENSATION_STUCK = "COMPENSATION_STUCK";
 
     private A1OrderSaga() {
     }
